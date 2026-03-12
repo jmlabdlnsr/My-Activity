@@ -18,7 +18,7 @@
         <div class="w-10 h-10 bg-indigo-600 rounded-xl flex-shrink-0 flex items-center justify-center text-white shadow-lg shadow-indigo-900">
           <BookOpen class="h-6 w-6" />
         </div>
-        <h2 class="text-xl font-black text-white tracking-tight uppercase">Manajer</h2>
+        <h2 class="text-xl font-black text-white tracking-tight">MyActivity</h2>
       </div>
       <button @click="toggleSidebar" class="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
         <Menu v-if="!isSidebarOpen" class="w-6 h-6" />

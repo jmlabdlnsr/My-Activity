@@ -109,8 +109,27 @@
 
         <!-- Kolom Kanan -->
         <div class="space-y-6 md:space-y-8">
+          <!-- Pengingat -->
           <section class="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-sm">
-            <h2 class="text-xl md:text-2xl font-black text-slate-800 mb-6">Aktivitas Terbaru</h2>
+            <h2 class="text-xl md:text-2xl font-black text-slate-800 mb-6">Pengingat</h2>
+            <div v-if="upcomingReminders.length > 0" class="space-y-4">
+              <div v-for="rem in upcomingReminders.slice(0, 3)" :key="rem.id" class="flex items-start p-4 bg-rose-50/50 rounded-2xl border border-rose-100">
+                <div class="w-10 h-10 bg-rose-500 rounded-xl flex items-center justify-center text-white shrink-0 mr-4 shadow-sm">
+                  <Bell class="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 class="font-bold text-slate-800 text-sm leading-tight">{{ rem.title }}</h3>
+                  <p class="text-[10px] text-rose-600 font-bold uppercase mt-1 tracking-wider">{{ formatDateTime(rem.reminder_time) }}</p>
+                </div>
+              </div>
+            </div>
+            <div v-else class="py-12 text-center bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-200">
+              <p class="text-slate-400 font-medium text-sm">Tidak ada pengingat.</p>
+            </div>
+          </section>
+
+          <!-- Aktivitas Terbaru -->
+          <section class="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-sm">
             <div v-if="todayActivities.length > 0" class="space-y-6">
                <div v-for="(act, idx) in todayActivities" :key="act.id" class="relative pl-8">
                   <div class="absolute left-0 top-0 h-full flex flex-col items-center">
@@ -202,17 +221,42 @@ const fetchDashboardData = async () => {
         const [sch, tsk, rem, act] = await Promise.all([
             api.get('/schedules'), api.get('/tasks'), api.get('/reminders'), api.get('/daily-activities')
         ]);
+        
+        const now = new Date();
         const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        todaySchedules.value = (sch.data || []).filter(s => s.day === days[new Date().getDay()]);
-        upcomingTasks.value = (tsk.data || []).filter(t => t.status === 'pending').sort((a,b) => new Date(a.deadline) - new Date(b.deadline));
-        const todayLocal = getTodayLocalDate();
-        todayActivities.value = (act.data || []).filter(a => new Date(a.activity_date).toISOString().split('T')[0] === todayLocal);
-        const nowMs = new Date().getTime();
-        upcomingReminders.value = (rem.data || []).filter(r => new Date(r.reminder_time).getTime() > nowMs);
-    } catch (error) {}
+        const currentDay = days[now.getDay()];
+        
+        // Filter Jadwal Hari Ini
+        todaySchedules.value = (sch.data || []).filter(s => s.day === currentDay);
+        
+        // Filter Tugas Pending
+        upcomingTasks.value = (tsk.data || []).filter(t => t.status === 'pending')
+            .sort((a,b) => new Date(a.deadline) - new Date(b.deadline));
+            
+        // Filter Aktivitas Hari Ini (Perbaikan Timezone)
+        const todayStr = now.toDateString();
+        todayActivities.value = (act.data || []).filter(a => {
+            return new Date(a.activity_date).toDateString() === todayStr;
+        });
+        
+        // Filter Pengingat Mendatang
+        const nowMs = now.getTime();
+        upcomingReminders.value = (rem.data || []).filter(r => new Date(r.reminder_time).getTime() > nowMs)
+            .sort((a,b) => new Date(a.reminder_time) - new Date(b.reminder_time));
+
+    } catch (error) {
+        console.error('Gagal memuat data dashboard:', error);
+    }
 };
 
 const formatDate = (date) => date ? new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-';
+
+const formatDateTime = (date) => {
+    if (!date) return '-';
+    const d = new Date(date);
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) + ' ' + 
+           d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+};
 
 onMounted(() => {
     fetchDashboardData();
